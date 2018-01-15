@@ -27,6 +27,10 @@ class SampleGenerator():
     def __enter__(self):
         return self
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        """
+    
     def _display(self, frames, number):
         """
         display a random sample of the generated frames 
@@ -38,7 +42,7 @@ class SampleGenerator():
         plt.colorbar()
         
 
-    def background():
+    def background(self):
         """
         generate _n_frame of background 
         """
@@ -52,7 +56,7 @@ class SampleGenerator():
 
         SampleGenerator._display(self, self._bg_frames, 10)
 
-    def tracks():
+    def tracks(self):
         """
         generate _n_frame of tracks based on the TrackModel class
         """
@@ -60,12 +64,18 @@ class SampleGenerator():
 
         # define the track model
         track_model = TrackModel()
-        for frame in range(self._n_frames):
+        for frame in range(self._n_frame):
             track_frame = np.zeros((48, 48), dtype=np.uint8)
 
+            # generate a track from the model
+            track_model.generate_track()
+            
             for w in range(1): 
-                rr, cc, val = line_aa(start_position[0] + w, start_position[1], end_position[0] + w, end_position[1])
-                counts_tmp = counts
+                rr, cc, val = line_aa(track_model.start_position[0],
+                                      track_model.start_position[1],
+                                      track_model.end_position[0],
+                                      track_model.end_position[1])
+                counts_tmp = track_model.counts
             
                 # give decreasing brightness
                 for i in range(len(val)):
@@ -85,7 +95,7 @@ class SampleGenerator():
         # print some information regarding the generated frames
         print "generated", self._n_frame, "of tracks"
 
-        SampleGenerator.display(self, self._track_frames, 10)
+        SampleGenerator._display(self, self._track_frames, 10)
         
 
 class TrackModel():
@@ -142,27 +152,30 @@ class TrackModel():
     def __enter__(self):
         return self
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        """
     
-    def _generate_tracks(self):
+    def generate_track(self):
         """
         build the track based on set parameters
         """
         
         # sample parameters from their distibutions
-        self.start_position = np.around(np.random.uniform(start_pos_min, start_pos_max, 2)).astype(int)
-        self.length = round(np.random.normal(mu_l, sigma_l, 1))
-        self.width = int(round(np.random.normal(mu_w, sigma_w, 1)))
-        self.theta = np.random.uniform(theta_min, theta_max, 1)
-        self.phi = np.random.uniform(phi_min, phi_max, 1)
-        self.counts = round(np.random.normal(mu_c, sigma_c, 1))
+        self.start_position = np.around(np.random.uniform(self.start_pos_min, self.start_pos_max, 2)).astype(int)
+        self.length = round(np.random.normal(self.mu_l, self.sigma_l, 1))
+        self.width = int(round(np.random.normal(self.mu_w, self.sigma_w, 1)))
+        self.theta = np.random.uniform(self.theta_min, self.theta_max, 1)
+        self.phi = np.random.uniform(self.phi_min, self.phi_max, 1)
+        self.counts = round(np.random.normal(self.mu_c, self.sigma_c, 1))
 
         # calculate end position
-        self.end_position[0] = start_position[0] + length * np.cos(theta)
+        self.end_position[0] = self.start_position[0] + self.length * np.cos(self.theta)
         if self.end_position[0] > 45:
             self.end_position[0] = 45
         if self.end_position[0] < 0:
             self.end_position[0] = 0
-        self.end_position[1] = start_position[1] + length * np.sin(theta)
+        self.end_position[1] = self.start_position[1] + self.length * np.sin(self.theta)
         if self.end_position[1] > 45:
             self.end_position[1] = 45 
         if self.end_position[1] < 0:
