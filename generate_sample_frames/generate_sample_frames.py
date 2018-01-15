@@ -19,7 +19,7 @@ class SampleGenerator():
         self._mu_bg = 1 # photon/pixel/GTU
         
         # number of frames to be generated
-        self._n_frame = 10
+        self._n_frame = 100
 
         # initialise samples
         self._bg_frames = []
@@ -81,12 +81,12 @@ class SampleGenerator():
 
         # sample from poisson to fill background frames
         samples = np.random.poisson(self._mu_bg, self._n_row * self._n_col * self._n_frame)
-        self._bg_frames = np.reshape(samples, (self._n_frame, self._n_row, self._n_col))
+        self._bg_frames = np.reshape(samples, (self._n_frame, self._n_row, self._n_col)).tolist()
 
         # display some information regarding the generated frames
         print "genarated", self._n_frame, "frames of background"
 
-        SampleGenerator._display(self, self._bg_frames, 10)
+        SampleGenerator._display(self, self._bg_frames, int(self._n_frame/10))
 
         
     def tracks(self):
@@ -130,9 +130,30 @@ class SampleGenerator():
         # print some information regarding the generated frames
         print "generated", self._n_frame, "frames of tracks"
 
-        SampleGenerator._display(self, self._track_frames, 10)
-        
+        SampleGenerator._display(self, self._track_frames, int(self._n_frame/10))
 
+        
+    def save(self):
+        """
+        save the generated frames to a text file
+        """
+        import pickle
+
+        if self._bg_frames != []:
+            with open("samples/sample_generator_bg.dat", "w") as f:
+                pickle.dump(self._bg_frames, f)
+        else:
+            print "Error: have not generated any background frames, so nothing to save"
+
+        if self._track_frames != []:
+            with open("samples/sample_generator_track.dat", "w") as f:
+                pickle.dump(self._track_frames, f)
+        else:
+            print "Error: have not generated any track frames, so nothing to save"
+
+        print "saved generated frames to file in samples/"
+        
+            
 class TrackModel():
     """
     define a simple toy model to generate 
