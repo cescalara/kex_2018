@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from IPython.display import display
 
 class SampleGenerator():
     """
@@ -7,7 +8,7 @@ class SampleGenerator():
     a simple track model to use as input to ML classificaiton
     """
 
-    def __init__(self):
+    def __init__(self, track_model = None):
 
         # constants
         # frame size
@@ -23,25 +24,56 @@ class SampleGenerator():
         # initialise samples
         self._bg_frames = []
         self._track_frames = []
+
+        # track_model status
+        self.track_model = track_model
         
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        """
     
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.track_model = None
+
+        
+    def _factors(self, n):
+        return set(
+            factor for i in range(1, int(n**0.5) + 1) if n % i == 0
+            for factor in (i, n//i))
+
+
     def _display(self, frames, number):
         """
         display a random sample of the generated frames 
         """
-        print "displaying a random sample of", number, "background frames: "
 
-        # plot to check
-        plt.imshow(frames[0], origin = "lower")
-        plt.colorbar()
+        print "displaying a random sample of", number, "frames: "
+
+        # divide into subplots for nice display
+        set_fac = SampleGenerator._factors(self, number)
         
+        n_subplts_x = int(sorted(list(set_fac))[1])
+        n_subplts_y = int(sorted(list(set_fac))[-2])
 
+        # display
+        fig, axarr = plt.subplots(n_subplts_x, n_subplts_y,
+                                  figsize = (n_subplts_y, n_subplts_x))
+        for x in range(n_subplts_x):
+            for y in range(n_subplts_y):
+
+                # pick a random frame number
+                ran_frame = int(round(np.random.uniform(0, self._n_frame - 1, 1)))
+                axarr[x, y].imshow(frames[ran_frame], origin = "lower", cmap = "viridis")
+                axarr[x,y].axis("off")
+        
+        # remove whitespace
+        fig.subplots_adjust(hspace = 0.05, wspace = 0.05)
+
+        # show the plot
+        display(fig)
+        plt.close("all")
+
+            
     def background(self):
         """
         generate _n_frame of background 
@@ -52,30 +84,33 @@ class SampleGenerator():
         self._bg_frames = np.reshape(samples, (self._n_frame, self._n_row, self._n_col))
 
         # display some information regarding the generated frames
-        print "genarated", self._n_frame, "of background"
+        print "genarated", self._n_frame, "frames of background"
 
         SampleGenerator._display(self, self._bg_frames, 10)
 
+        
     def tracks(self):
         """
         generate _n_frame of tracks based on the TrackModel class
         """
         from skimage.draw import line_aa
 
-        # define the track model
-        track_model = TrackModel()
+        # define the default track model, if not passed on __init__
+        if self.track_model is None:
+            self.track_model = TrackModel()
+
         for frame in range(self._n_frame):
             track_frame = np.zeros((48, 48), dtype=np.uint8)
 
             # generate a track from the model
-            track_model.generate_track()
+            self.track_model.generate_track()
             
             for w in range(1): 
-                rr, cc, val = line_aa(track_model.start_position[0],
-                                      track_model.start_position[1],
-                                      track_model.end_position[0],
-                                      track_model.end_position[1])
-                counts_tmp = track_model.counts
+                rr, cc, val = line_aa(self.track_model.start_position[0],
+                                      self.track_model.start_position[1],
+                                      self.track_model.end_position[0],
+                                      self.track_model.end_position[1])
+                counts_tmp = self.track_model.counts
             
                 # give decreasing brightness
                 for i in range(len(val)):
@@ -93,7 +128,7 @@ class SampleGenerator():
 
                 
         # print some information regarding the generated frames
-        print "generated", self._n_frame, "of tracks"
+        print "generated", self._n_frame, "frames of tracks"
 
         SampleGenerator._display(self, self._track_frames, 10)
         
