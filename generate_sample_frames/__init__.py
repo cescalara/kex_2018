@@ -1,1 +1,2 @@
-from generate_sample_frames import *
+from .generate_sample_frames import TrackModel
+from .generate_sample_frames import SampleGenerator
