@@ -2,7 +2,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 from IPython.display import display
 import os, errno
-from __future__ import print_function
 
 
 class SampleGenerator():
@@ -100,7 +99,7 @@ class SampleGenerator():
         self._bg_frames = np.reshape(samples, (self._n_frame, self._n_row, self._n_col)).tolist()
 
         # display some information regarding the generated frames
-        print ("genarated", self._n_frame, "frames of background")
+        print ("generated", self._n_frame, "frames of background")
         
         # generate labels
         self._bg_labels = np.zeros((self._n_frame,), dtype=np.float64)
@@ -115,7 +114,7 @@ class SampleGenerator():
         
         
         # display some information regarding the generated labels
-        print ("genarated", self._n_frame, "background labels")
+        print ("generated", self._n_frame, "background labels")
         
         SampleGenerator._display(self, "background")
 
