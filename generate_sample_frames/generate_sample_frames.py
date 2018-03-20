@@ -2,6 +2,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from IPython.display import display
 import os, errno
+from __future__ import print_function
+
 
 class SampleGenerator():
     """
@@ -41,21 +43,22 @@ class SampleGenerator():
         self.track_model = None
 
         
-    def _factors(self, n):
+    def _factors(self):
+        n = int(self._n_frame/10)
         return set(
             factor for i in range(1, int(n**0.5) + 1) if n % i == 0
             for factor in (i, n//i))
 
 
-    def _display(self, frames, number):
+    def _display(self, type):
         """
         display a random sample of the generated frames 
         """
 
-        print ("displaying a random sample of", number, "frames: ")
+        print ("displaying a random sample of", int(self._n_frame/10), "frames: ")
 
         # divide into subplots for nice display
-        set_fac = SampleGenerator._factors(self, number)
+        set_fac = SampleGenerator._factors(self)
         
         n_subplts_x = int(sorted(list(set_fac))[1])
         n_subplts_y = int(sorted(list(set_fac))[-2])
@@ -68,7 +71,13 @@ class SampleGenerator():
 
                 # pick a random frame number
                 ran_frame = int(round((np.random.uniform(0, self._n_frame - 1, 1)).item()))
-                axarr[x, y].imshow(frames[ran_frame], origin = "lower", cmap = "viridis")
+
+                if (type == "background"):
+                    axarr[x, y].imshow(self._bg_frames[ran_frame], origin = "lower", cmap = "viridis")
+                elif (type == "tracks"):
+                    axarr[x, y].imshow(self._track_frames[ran_frame], origin = "lower", cmap = "viridis")
+                else:
+                    print ("error: no type specified for frames")
                 axarr[x,y].axis("off")
         
         # remove whitespace
@@ -94,31 +103,21 @@ class SampleGenerator():
         print ("genarated", self._n_frame, "frames of background")
         
         # generate labels
-        
         self._bg_labels = np.zeros((self._n_frame,), dtype=np.float64)
-        
-        
-        
-        # test: Each label is [0 1]
         
         a = np.zeros((self._n_frame,), dtype=np.float64)
         a = np.reshape(a, (-1,1))
-        #print("Shape of a: ", np.shape(a))
         b = np.ones((self._n_frame,), dtype=np.float64)
         b = np.reshape(b, (-1,1))
-        #print("Shape of b: ", np.shape(b))
+
         c = np.concatenate([a, b], axis=1)
-        #print("Shape of c: ", np.shape(c))
-        #print(c)
         self._bg_labels = c
         
         
         # display some information regarding the generated labels
         print ("genarated", self._n_frame, "background labels")
         
-        
-
-        SampleGenerator._display(self, self._bg_frames, int(self._n_frame/10))
+        SampleGenerator._display(self, "background")
 
         
     def tracks(self, n_frame_in):
@@ -164,30 +163,21 @@ class SampleGenerator():
         # print some information regarding the generated frames
         print ("generated", self._n_frame, "frames of tracks")
         
-        # generate labels
-        
+        # generate labels 
         self._track_labels = np.ones((self._n_frame,), dtype=np.float64)
         
-        # test: Each label is [1 0]
-        
-        # test: Each label is [0 1]
         a = np.zeros((self._n_frame,), dtype=np.float64)
         a = np.reshape(a, (-1,1))
-        #print("Shape of a: ", np.shape(a))
         b = np.ones((self._n_frame,), dtype=np.float64)
         b = np.reshape(b, (-1,1))
-        #print("Shape of b: ", np.shape(b))
         
         c = np.concatenate([b, a], axis=1)
-        #print("Shape of c: ", np.shape(c))
-        
-        #print(c)
         self._track_labels = c
         
         # display some information regarding the generated labels
         print ("genarated", self._n_frame, "track labels")
 
-        SampleGenerator._display(self, self._track_frames, int(self._n_frame/10))
+        SampleGenerator._display(self, "tracks")
 
         
     def save(self):
@@ -241,7 +231,7 @@ class TrackModel():
 
     def __init__(self):
 
-        #configurable parameters
+        # configurable parameters
         # start position pixel coordinates
         self.start_pos_min = 5
         self.start_pos_max = 43
