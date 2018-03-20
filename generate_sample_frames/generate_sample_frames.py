@@ -1,6 +1,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from IPython.display import display
+import os, errno
+
 
 class SampleGenerator():
     """
@@ -24,6 +26,10 @@ class SampleGenerator():
         # initialise samples
         self._bg_frames = []
         self._track_frames = []
+        
+        # initialise labels
+        self._bg_labels = []
+        self._track_labels = []
 
         # track_model status
         self.track_model = track_model
@@ -36,21 +42,22 @@ class SampleGenerator():
         self.track_model = None
 
         
-    def _factors(self, n):
+    def _factors(self):
+        n = int(self._n_frame/10)
         return set(
             factor for i in range(1, int(n**0.5) + 1) if n % i == 0
             for factor in (i, n//i))
 
 
-    def _display(self, frames, number):
+    def _display(self, type):
         """
         display a random sample of the generated frames 
         """
 
-        print "displaying a random sample of", number, "frames: "
+        print ("displaying a random sample of", int(self._n_frame/10), "frames: ")
 
         # divide into subplots for nice display
-        set_fac = SampleGenerator._factors(self, number)
+        set_fac = SampleGenerator._factors(self)
         
         n_subplts_x = int(sorted(list(set_fac))[1])
         n_subplts_y = int(sorted(list(set_fac))[-2])
@@ -62,8 +69,14 @@ class SampleGenerator():
             for y in range(n_subplts_y):
 
                 # pick a random frame number
-                ran_frame = int(round(np.random.uniform(0, self._n_frame - 1, 1)))
-                axarr[x, y].imshow(frames[ran_frame], origin = "lower", cmap = "viridis")
+                ran_frame = int(round((np.random.uniform(0, self._n_frame - 1, 1)).item()))
+
+                if (type == "background"):
+                    axarr[x, y].imshow(self._bg_frames[ran_frame], origin = "lower", cmap = "viridis")
+                elif (type == "tracks"):
+                    axarr[x, y].imshow(self._track_frames[ran_frame], origin = "lower", cmap = "viridis")
+                else:
+                    print ("error: no type specified for frames")
                 axarr[x,y].axis("off")
         
         # remove whitespace
@@ -74,26 +87,45 @@ class SampleGenerator():
         plt.close("all")
 
             
-    def background(self):
+    def background(self, n_frame_in):
         """
         generate _n_frame of background 
         """
+        
+        self._n_frame = n_frame_in
 
         # sample from poisson to fill background frames
         samples = np.random.poisson(self._mu_bg, self._n_row * self._n_col * self._n_frame)
         self._bg_frames = np.reshape(samples, (self._n_frame, self._n_row, self._n_col)).tolist()
 
         # display some information regarding the generated frames
-        print "genarated", self._n_frame, "frames of background"
+        print ("generated", self._n_frame, "frames of background")
+        
+        # generate labels
+        self._bg_labels = np.zeros((self._n_frame,), dtype=np.float64)
+        
+        a = np.zeros((self._n_frame,), dtype=np.float64)
+        a = np.reshape(a, (-1,1))
+        b = np.ones((self._n_frame,), dtype=np.float64)
+        b = np.reshape(b, (-1,1))
 
-        SampleGenerator._display(self, self._bg_frames, int(self._n_frame/10))
+        c = np.concatenate([a, b], axis=1)
+        self._bg_labels = c
+        
+        
+        # display some information regarding the generated labels
+        print ("generated", self._n_frame, "background labels")
+        
+        SampleGenerator._display(self, "background")
 
         
-    def tracks(self):
+    def tracks(self, n_frame_in):
         """
         generate _n_frame of tracks based on the TrackModel class
         """
         from skimage.draw import line_aa
+        
+        self._n_frame = n_frame_in
 
         # define the default track model, if not passed on __init__
         if self.track_model is None:
@@ -128,9 +160,23 @@ class SampleGenerator():
 
                 
         # print some information regarding the generated frames
-        print "generated", self._n_frame, "frames of tracks"
+        print ("generated", self._n_frame, "frames of tracks")
+        
+        # generate labels 
+        self._track_labels = np.ones((self._n_frame,), dtype=np.float64)
+        
+        a = np.zeros((self._n_frame,), dtype=np.float64)
+        a = np.reshape(a, (-1,1))
+        b = np.ones((self._n_frame,), dtype=np.float64)
+        b = np.reshape(b, (-1,1))
+        
+        c = np.concatenate([b, a], axis=1)
+        self._track_labels = c
+        
+        # display some information regarding the generated labels
+        print ("genarated", self._n_frame, "track labels")
 
-        SampleGenerator._display(self, self._track_frames, int(self._n_frame/10))
+        SampleGenerator._display(self, "tracks")
 
         
     def save(self):
@@ -138,20 +184,33 @@ class SampleGenerator():
         save the generated frames to a text file
         """
         import pickle
+        
+        
+        if not os.path.exists("samples"):
+            os.makedirs("samples")
 
         if self._bg_frames != []:
-            with open("samples/sample_generator_bg.dat", "w") as f:
+            with open("samples/sample_generator_bg.dat", "wb") as f:
                 pickle.dump(self._bg_frames, f)
+                
+            with open("samples/sample_generator_bg_labels.dat", "wb") as f:
+                pickle.dump(self._bg_labels, f)
         else:
-            print "Error: have not generated any background frames, so nothing to save"
+            print ("Error: have not generated any background frames, so nothing to save")
 
         if self._track_frames != []:
-            with open("samples/sample_generator_track.dat", "w") as f:
+            with open("samples/sample_generator_track.dat", "wb") as f:
                 pickle.dump(self._track_frames, f)
+                
+            with open("samples/sample_generator_track_labels.dat", "wb") as f:
+                pickle.dump(self._track_labels, f)
         else:
-            print "Error: have not generated any track frames, so nothing to save"
+            print ("Error: have not generated any track frames, so nothing to save")
 
-        print "saved generated frames to file in samples/"
+        print ("saved generated frames to file in samples/")
+        
+
+
         
             
 class TrackModel():
@@ -171,7 +230,7 @@ class TrackModel():
 
     def __init__(self):
 
-        #configurable parameters
+        # configurable parameters
         # start position pixel coordinates
         self.start_pos_min = 5
         self.start_pos_max = 43
@@ -219,11 +278,11 @@ class TrackModel():
         
         # sample parameters from their distibutions
         self.start_position = np.around(np.random.uniform(self.start_pos_min, self.start_pos_max, 2)).astype(int)
-        self.length = round(np.random.normal(self.mu_l, self.sigma_l, 1))
-        self.width = int(round(np.random.normal(self.mu_w, self.sigma_w, 1)))
+        self.length = round((np.random.normal(self.mu_l, self.sigma_l, 1)).item())
+        self.width = int(round((np.random.normal(self.mu_w, self.sigma_w, 1)).item()))
         self.theta = np.random.uniform(self.theta_min, self.theta_max, 1)
         self.phi = np.random.uniform(self.phi_min, self.phi_max, 1)
-        self.counts = round(np.random.normal(self.mu_c, self.sigma_c, 1))
+        self.counts = round((np.random.normal(self.mu_c, self.sigma_c, 1)).item())
 
         # calculate end position
         self.end_position[0] = self.start_position[0] + self.length * np.cos(self.theta)
