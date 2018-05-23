@@ -13,7 +13,6 @@ class SampleGenerator():
     def __init__(self, track_model = None):
 
         # constants
-        
         # frame size
         self._n_row = 48
         self._n_col = 48
@@ -23,9 +22,6 @@ class SampleGenerator():
         
         # number of frames to be generated
         self._n_frame = 100
-        
-        # number of angle categories
-        self._n_angles = 4
 
         # initialise samples
         self._bg_frames = []
@@ -55,7 +51,7 @@ class SampleGenerator():
             for factor in (i, n//i))
 
 
-    def _display(self, frames, number, variant):
+    def _display(self, frames, number):
         """
         display a random sample of the generated frames 
         """
@@ -82,24 +78,18 @@ class SampleGenerator():
         
         # remove whitespace
         fig.subplots_adjust(hspace = 0.05, wspace = 0.05)
-        fig.colorbar(axarr[0,0].imshow(frames[0], norm=self.norm), ax=axarr, orientation='vertical', fraction=.1)
-        
-        # save the plot as eps
-        filename = variant+'.eps'
-        plt.savefig(filename, format='eps', dpi=400)
 
         # show the plot
         display(fig)
         plt.close("all")
 
             
-    def background(self, n_frame_in, n_angles_in):
+    def background(self, n_frame_in):
         """
         generate _n_frame of background 
         """
         
         self._n_frame = n_frame_in
-        self._n_angles = n_angles_in
 
         # sample from poisson to fill background frames
         samples = np.random.poisson(self._mu_bg, self._n_row * self._n_col * self._n_frame)
@@ -109,48 +99,32 @@ class SampleGenerator():
         print ("genarated", self._n_frame, "frames of background")
         
         # generate labels
-        A = np.zeros((self._n_frame,), dtype=np.float64)
-        A = np.reshape(A, (-1,1))
         
-        for i in range(self._n_angles-1):
-            addthis = np.zeros((self._n_frame,), dtype=np.float64)
-            addthis = np.reshape(addthis, (-1,1))
-            A = np.concatenate([A, addthis], axis=1)
-            
-        theones = np.ones((self._n_frame,), dtype=np.float64)
-        theones = np.reshape(theones, (-1,1))
-        A = np.concatenate([A, theones], axis=1)
-        
-        self._bg_labels = A
+        self._bg_labels = np.zeros((self._n_frame,), dtype=np.float64)
+        a = np.zeros((self._n_frame,), dtype=np.float64)
+        a = np.reshape(a, (-1,1))
+        b = np.ones((self._n_frame,), dtype=np.float64)
+        b = np.reshape(b, (-1,1))
+        c = np.concatenate([a, b], axis=1)
+        self._bg_labels = c
         
         # display some information regarding the generated labels
         print ("genarated", self._n_frame, "background labels")
         
-        SampleGenerator._display(self, self._bg_frames, 10, 'bg')
+        SampleGenerator._display(self, self._bg_frames, 40)
 
         
-    def tracks(self, n_frame_in, n_angles_in):
+    def tracks(self, n_frame_in):
         """
         generate _n_frame of tracks based on the TrackModel class
         """
         from skimage.draw import line_aa
         
         self._n_frame = n_frame_in
-        self._n_angles = n_angles_in
 
         # define the default track model, if not passed on __init__
         if self.track_model is None:
             self.track_model = TrackModel()
-        
-        A = np.zeros((self._n_frame,), dtype=np.float64)
-        A = np.reshape(A, (-1,1))
-        
-        for i in range(self._n_angles):
-            zerovec = np.zeros((self._n_frame,), dtype=np.float64)
-            zerovec = np.reshape(zerovec, (-1,1))
-            A = np.concatenate([A, zerovec], axis=1)
-            
-        counter = 0
 
         for frame in range(self._n_frame):
             track_frame = np.zeros((48, 48), dtype=np.uint8)
@@ -173,32 +147,28 @@ class SampleGenerator():
                     if counts_tmp < 0:
                         counts_tmp = 0
 
-                        
             # add background
             samples = np.random.poisson(1, self._n_row * self._n_col)
             bg_frame = np.reshape(samples, (self._n_row, self._n_col))
             track_frame = track_frame + bg_frame
             self._track_frames.append(track_frame)
-            
-            
-         # generate labels
-            thetatemp = self.track_model.theta
-            intervalSize = np.pi/self._n_angles
-            
-            for j in range(self._n_angles):
-                if (thetatemp > j*intervalSize and thetatemp < (j+1)*intervalSize) or (thetatemp > j*intervalSize+np.pi and thetatemp < (j+1)*intervalSize+np.pi):
-                    A[counter][j] = 1
-                    
-            self._track_labels = A  
-            counter = counter + 1
+
                 
         # print some information regarding the generated frames
         print ("generated", self._n_frame, "frames of tracks")
         
+        # generate labels
+        a = np.zeros((self._n_frame,), dtype=np.float64)
+        a = np.reshape(a, (-1,1))
+        b = np.ones((self._n_frame,), dtype=np.float64)
+        b = np.reshape(b, (-1,1))
+        c = np.concatenate([b, a], axis=1)
+        self._track_labels = c
+        
         # display some information regarding the generated labels
         print ("genarated", self._n_frame, "track labels")
 
-        SampleGenerator._display(self, self._track_frames, 10, 'track')
+        SampleGenerator._display(self, self._track_frames, 40)
 
         
     def save(self):
