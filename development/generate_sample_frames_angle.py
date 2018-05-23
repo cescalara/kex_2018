@@ -39,7 +39,7 @@ class SampleGenerator():
         self.track_model = track_model
         
         # norm
-        self.norm = colors.Normalize(0, track_model.mu_c + 2*track_model.sigma_c)
+        self.norm = colors.Normalize(0, track_model.mu_c + track_model.sigma_c)
         
     def __enter__(self):
         return self
